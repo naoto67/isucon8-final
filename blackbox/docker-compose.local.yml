@@ -14,6 +14,9 @@ services:
       - "/usr/local/openresty/bin/openresty"
       - "-c"
       - "/etc/nginx/nginx.local.conf"
+    networks:
+      default:
+        ipv4_address: 192.168.16.5
 
   isubank:
     image: golang:1.11
@@ -24,6 +27,9 @@ services:
     volumes:
       - isubankgopath:/go
       - ./bank:/go/src/bank
+    networks:
+      default:
+        ipv4_address: 192.168.16.6
 
   logger:
     image: golang:1.11
@@ -32,6 +38,9 @@ services:
     volumes:
       - loggergopath:/go
       - ./logger:/go/src/logger
+    networks:
+      default:
+        ipv4_address: 192.168.16.8
 
   mysql:
     image: mysql:8
@@ -42,8 +51,16 @@ services:
       - mysql:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d
       - ./conf.d:/etc/mysql/conf.d
+    networks:
+      default:
+        ipv4_address: 192.168.16.9
 
 volumes:
   isubankgopath:
   loggergopath:
   mysql:
+
+networks:
+  default:
+    external:
+      name: webapp_default

@@ -5,14 +5,17 @@ services:
     volumes:
       - ./nginx:/etc/nginx
     ports:
-      - "443:443"
+      - "8080:80"
     links:
       - isucoin
+    networks:
+      default:
+        ipv4_address: 192.168.16.4
 
   isucoin:
     environment:
       ISU_APP_PORT:    '5000'
-      ISU_DB_HOST:     'mysql'
+      ISU_DB_HOST:     '192.168.16.3'
       ISU_DB_PORT:     '3306'
       ISU_DB_USER:     'isucon'
       ISU_DB_PASSWORD: 'isucon'
@@ -22,6 +25,9 @@ services:
       - mysql
     volumes:
       - ./public:/public
+    networks:
+      default:
+        ipv4_address: 192.168.16.2
 
   mysql:
     image: mysql:8
@@ -35,6 +41,17 @@ services:
     # development only
     ports:
       - "13306:3306"
+    networks:
+      default:
+        ipv4_address: 192.168.16.3
 
 volumes:
   mysql:
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.16.0/24
+          gateway: 192.168.16.1
