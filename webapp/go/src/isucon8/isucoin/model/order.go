@@ -66,12 +66,9 @@ func GetHighestBuyOrder(d QueryExecutor) (*Order, error) {
 	return scanOrder(d.Query("SELECT * FROM orders WHERE type = ? AND closed_at IS NULL ORDER BY price DESC, created_at ASC LIMIT 1", OrderTypeBuy))
 }
 
-func FetchOrderRelation(d QueryExecutor, order *Order) error {
+func FetchOrderRelation(d QueryExecutor, order *Order, user *User) error {
 	var err error
-	order.User, err = GetUserByID(d, order.UserID)
-	if err != nil {
-		return errors.Wrapf(err, "GetUserByID failed. id")
-	}
+	order.User = user
 	if order.TradeID > 0 {
 		order.Trade, err = GetTradeByID(d, order.TradeID)
 		if err != nil {

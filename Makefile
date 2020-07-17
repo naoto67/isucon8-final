@@ -5,6 +5,9 @@ run_local:
 run_app:
 	docker-compose -f webapp/docker-compose.go.yml -f webapp/docker-compose.yml up
 
+restart_app:
+	docker-compose -f webapp/docker-compose.go.yml -f webapp/docker-compose.yml restart
+
 run_blackbox:
 	docker-compose -f blackbox/docker-compose.local.yml up -d
 
@@ -30,3 +33,6 @@ build_bench:
 
 cat_alp:
 	cat webapp/nginx/log/access.log | alp ltsv -r -m "/order/.+" | head -n 30
+
+mysql_console:
+	docker-compose -f webapp/docker-compose.go.yml run isucoin mysql -uisucon -pisucon -h192.168.16.3 isucoin
