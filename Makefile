@@ -29,4 +29,4 @@ build_bench:
 	mv bench/src/bench/bench bench/bin/bench
 
 cat_alp:
-	cat webapp/nginx/log/access.log | alp ltsv -r | head -n 30
+	cat webapp/nginx/log/access.log | alp ltsv -r -m "/order/.+" | head -n 30
