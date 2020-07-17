@@ -21,17 +21,18 @@ type Setting struct {
 	Val  string
 }
 
+var settings map[string]string = make(map[string]string)
+
 func SetSetting(d QueryExecutor, k, v string) error {
-	_, err := d.Exec(`INSERT INTO setting (name, val) VALUES (?, ?) ON DUPLICATE KEY UPDATE val = VALUES(val)`, k, v)
-	return err
+	settings[k] = v
+	return nil
 }
 
 func GetSetting(d QueryExecutor, k string) (string, error) {
-	s, err := scanSetting(d.Query(`SELECT * FROM setting WHERE name = ?`, k))
-	if err != nil {
-		return "", err
+	if val, ok := settings[k]; ok {
+		return val, nil
 	}
-	return s.Val, nil
+	return "", errors.New(k + " is not found")
 }
 
 func Isubank(d QueryExecutor) (*isubank.Isubank, error) {
