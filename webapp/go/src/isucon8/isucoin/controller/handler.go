@@ -233,7 +233,7 @@ func (h *Handler) AddOrders(w http.ResponseWriter, r *http.Request, _ httprouter
 	price, _ := strconv.ParseInt(r.FormValue("price"), 10, 64)
 	var order *model.Order
 	err = h.txScope(func(tx *sql.Tx) (err error) {
-		order, err = model.AddOrder(tx, r.FormValue("type"), user.ID, amount, price)
+		order, err = model.AddOrder(tx, r.FormValue("type"), user, amount, price)
 		return
 	})
 	switch {

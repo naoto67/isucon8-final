@@ -78,13 +78,9 @@ func FetchOrderRelation(d QueryExecutor, order *Order, user *User) error {
 	return nil
 }
 
-func AddOrder(tx *sql.Tx, ot string, userID, amount, price int64) (*Order, error) {
+func AddOrder(tx *sql.Tx, ot string, user *User, amount, price int64) (*Order, error) {
 	if amount <= 0 || price <= 0 {
 		return nil, ErrParameterInvalid
-	}
-	user, err := getUserByIDWithLock(tx, userID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "getUserByIDWithLock failed. id:%d", userID)
 	}
 	bank, err := Isubank(tx)
 	if err != nil {
@@ -110,7 +106,9 @@ func AddOrder(tx *sql.Tx, ot string, userID, amount, price int64) (*Order, error
 	default:
 		return nil, ErrParameterInvalid
 	}
-	res, err := tx.Exec(`INSERT INTO orders (type, user_id, amount, price, created_at) VALUES (?, ?, ?, ?, NOW(6))`, ot, user.ID, amount, price)
+	now := time.Now()
+	nowStr := now.Format("2006/01/02 15:04:05.000000")
+	res, err := tx.Exec(`INSERT INTO orders (type, user_id, amount, price, created_at) VALUES (?, ?, ?, ?, ?)`, ot, user.ID, amount, price, nowStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert order failed")
 	}
@@ -124,7 +122,15 @@ func AddOrder(tx *sql.Tx, ot string, userID, amount, price int64) (*Order, error
 		"amount":   amount,
 		"price":    price,
 	})
-	return GetOrderByID(tx, id)
+
+	return &Order{
+		ID:        id,
+		Type:      ot,
+		UserID:    user.ID,
+		Amount:    amount,
+		Price:     price,
+		CreatedAt: now,
+	}, nil
 }
 
 func DeleteOrder(tx *sql.Tx, userID, orderID int64, reason string) error {
