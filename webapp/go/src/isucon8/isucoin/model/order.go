@@ -134,17 +134,13 @@ func AddOrder(tx *sql.Tx, ot string, user *User, amount, price int64) (*Order, e
 }
 
 func DeleteOrder(tx *sql.Tx, userID, orderID int64, reason string) error {
-	user, err := getUserByIDWithLock(tx, userID)
-	if err != nil {
-		return errors.Wrapf(err, "getUserByIDWithLock failed. id:%d", userID)
-	}
 	order, err := getOrderByIDWithLock(tx, orderID)
 	switch {
 	case err == sql.ErrNoRows:
 		return ErrOrderNotFound
 	case err != nil:
 		return errors.Wrapf(err, "getOrderByIDWithLock failed. id")
-	case order.UserID != user.ID:
+	case order.UserID != userID:
 		return ErrOrderNotFound
 	case order.ClosedAt != nil:
 		return ErrOrderAlreadyClosed
