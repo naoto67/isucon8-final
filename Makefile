@@ -13,7 +13,7 @@ run_blackbox:
 
 ### isubankとisuloggerはnginxを経由していない
 .PHONY: bench
-bench:
+bench: clean_log
 	./bench/bin/bench \
 	-appep=http://192.168.16.4 \
 	-bankep=http://192.168.16.6:5515 \
@@ -26,7 +26,6 @@ down:
 	docker-compose -f webapp/docker-compose.go.yml -f webapp/docker-compose.yml down
 
 build_bench:
-	sudo rm webapp/nginx/log/access.log
 	cd bench/src/bench; rm go.mod; go mod init bench
 	cd bench/src/bench && go build -v -o bench cmd/bench/main.go
 	mv bench/src/bench/bench bench/bin/bench
@@ -36,3 +35,6 @@ cat_alp:
 
 mysql_console:
 	docker-compose -f webapp/docker-compose.go.yml run isucoin mysql -uisucon -pisucon -h192.168.16.3 isucoin
+
+clean_log:
+	cp /dev/null webapp/nginx/log/access.log
