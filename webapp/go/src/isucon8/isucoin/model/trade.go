@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"isucon8/isubank"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -137,10 +139,18 @@ func commitReservedOrder(tx *sql.Tx, order *Order, targets []*Order, reserves []
 		"price":    order.Price,
 		"amount":   order.Amount,
 	})
+	var orderIDs []string
 	for _, o := range append(targets, order) {
-		if _, err = tx.Exec(`UPDATE orders SET trade_id = ?, closed_at = NOW(6) WHERE id = ?`, tradeID, o.ID); err != nil {
-			return errors.Wrap(err, "update order for trade")
-		}
+		orderIDs = append(orderIDs, strconv.Itoa(int(o.ID)))
+	}
+
+	sql := fmt.Sprintf(`UPDATE orders SET trade_id = %d, closed_at = NOW(6) WHERE id IN (%s)`, tradeID, strings.Join(orderIDs, ","))
+	_, err = tx.Exec(sql)
+	if err != nil {
+		return errors.Wrap(err, "update order for trade")
+	}
+
+	for _, o := range append(targets, order) {
 		sendLog(tx, o.Type+".trade", map[string]interface{}{
 			"order_id": o.ID,
 			"price":    order.Price,
