@@ -35,7 +35,7 @@ func GetOrdersByUserIDAndLastTradeId(d QueryExecutor, userID int64, tradeID int6
 	return scanOrders(d.Query(`SELECT * FROM orders WHERE user_id = ? AND trade_id IS NOT NULL AND trade_id > ? ORDER BY created_at ASC`, userID, tradeID))
 }
 
-func getOpenOrderByID(tx *sql.Tx, id int64) (*Order, error) {
+func getOpenOrderByID(tx *sql.Tx, id int64, user *User) (*Order, error) {
 	order, err := getOrderByIDWithLock(tx, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "getOrderByIDWithLock sell_order")
@@ -43,9 +43,13 @@ func getOpenOrderByID(tx *sql.Tx, id int64) (*Order, error) {
 	if order.ClosedAt != nil {
 		return nil, ErrOrderAlreadyClosed
 	}
-	order.User, err = getUserByIDWithLock(tx, order.UserID)
-	if err != nil {
-		return nil, errors.Wrap(err, "getUserByIDWithLock sell user")
+	if user == nil {
+		order.User, err = getUserByIDWithLock(tx, order.UserID)
+		if err != nil {
+			return nil, errors.Wrap(err, "getUserByIDWithLock sell user")
+		}
+	} else {
+		order.User = user
 	}
 	return order, nil
 }

@@ -170,7 +170,7 @@ func commitReservedOrder(tx *sql.Tx, order *Order, targets []*Order, reserves []
 }
 
 func tryTrade(tx *sql.Tx, orderID int64) error {
-	order, err := getOpenOrderByID(tx, orderID)
+	order, err := getOpenOrderByID(tx, orderID, nil)
 	if err != nil {
 		return err
 	}
@@ -200,9 +200,9 @@ func tryTrade(tx *sql.Tx, orderID int64) error {
 	var targetOrders []*Order
 	switch order.Type {
 	case OrderTypeBuy:
-		targetOrders, err = scanOrders(tx.Query(`SELECT * FROM orders WHERE type = ? AND closed_at IS NULL AND price <= ? ORDER BY price ASC, created_at ASC, id ASC`, OrderTypeSell, order.Price))
+		targetOrders, err = scanOrdersWithUser(tx.Query(`SELECT * FROM orders LEFT JOIN user ON user.id = orders.user_id WHERE type = ? AND closed_at IS NULL AND price <= ? ORDER BY price ASC, orders.created_at ASC, orders.id ASC`, OrderTypeSell, order.Price))
 	case OrderTypeSell:
-		targetOrders, err = scanOrders(tx.Query(`SELECT * FROM orders WHERE type = ? AND closed_at IS NULL AND price >= ? ORDER BY price DESC, created_at ASC, id ASC`, OrderTypeBuy, order.Price))
+		targetOrders, err = scanOrdersWithUser(tx.Query(`SELECT * FROM orders LEFT JOIN user ON user.id = orders.user_id WHERE type = ? AND closed_at IS NULL AND price >= ? ORDER BY price DESC, orders.created_at ASC, orders.id ASC`, OrderTypeBuy, order.Price))
 	}
 	if err != nil {
 		return errors.Wrap(err, "find target orders")
@@ -212,13 +212,14 @@ func tryTrade(tx *sql.Tx, orderID int64) error {
 	}
 
 	for _, to := range targetOrders {
-		to, err = getOpenOrderByID(tx, to.ID)
+		to, err = getOpenOrderByID(tx, to.ID, to.User)
 		if err != nil {
 			if err == ErrOrderAlreadyClosed {
 				continue
 			}
 			return errors.Wrap(err, "getOpenOrderByID  buy_order")
 		}
+
 		if to.Amount > restAmount {
 			continue
 		}

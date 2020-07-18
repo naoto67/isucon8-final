@@ -163,3 +163,32 @@ func scanUser(rows *sql.Rows, err error) (*User, error) {
 	}
 	return nil, sql.ErrNoRows
 }
+
+func scanOrdersWithUser(rows *sql.Rows, e error) (orders []*Order, err error) {
+	if e != nil {
+		return nil, e
+	}
+	defer func() {
+		err = rows.Close()
+	}()
+	orders = []*Order{}
+	for rows.Next() {
+		var v Order
+		var u User
+		var closedAt mysql.NullTime
+		var tradeID sql.NullInt64
+		if err := rows.Scan(&v.ID, &v.Type, &v.UserID, &v.Amount, &v.Price, &closedAt, &tradeID, &v.CreatedAt, &u.ID, &u.BankID, &u.Name, &u.Password, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		if closedAt.Valid {
+			v.ClosedAt = &closedAt.Time
+		}
+		if tradeID.Valid {
+			v.TradeID = tradeID.Int64
+		}
+		v.User = &u
+		orders = append(orders, &v)
+	}
+	err = rows.Err()
+	return
+}
