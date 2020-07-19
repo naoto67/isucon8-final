@@ -51,6 +51,10 @@ func (b *Isulogger) Send(tag string, data interface{}) error {
 	})
 }
 
+func (b *Isulogger) BulkSend(body interface{}) error {
+	return b.request("/send_bulk", body)
+}
+
 func (b *Isulogger) request(p string, v interface{}) error {
 	u := new(url.URL)
 	*u = *b.endpoint

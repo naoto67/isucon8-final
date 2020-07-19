@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"isucon8/isubank"
+	"isucon8/isulogger"
 	"log"
 	"strconv"
 	"strings"
@@ -140,8 +141,21 @@ func commitReservedOrder(tx *sql.Tx, order *Order, targets []*Order, reserves []
 		"amount":   order.Amount,
 	})
 	var orderIDs []string
+	var logs []isulogger.Log
 	for _, o := range append(targets, order) {
 		orderIDs = append(orderIDs, strconv.Itoa(int(o.ID)))
+
+		logs = append(logs, isulogger.Log{
+			Tag:  o.Type + ".trade",
+			Time: time.Now(),
+			Data: map[string]interface{}{
+				"order_id": o.ID,
+				"price":    order.Price,
+				"amount":   o.Amount,
+				"user_id":  o.UserID,
+				"trade_id": tradeID,
+			},
+		})
 	}
 
 	sql := fmt.Sprintf(`UPDATE orders SET trade_id = %d, closed_at = NOW(6) WHERE id IN (%s)`, tradeID, strings.Join(orderIDs, ","))
@@ -150,15 +164,8 @@ func commitReservedOrder(tx *sql.Tx, order *Order, targets []*Order, reserves []
 		return errors.Wrap(err, "update order for trade")
 	}
 
-	for _, o := range append(targets, order) {
-		sendLog(tx, o.Type+".trade", map[string]interface{}{
-			"order_id": o.ID,
-			"price":    order.Price,
-			"amount":   o.Amount,
-			"user_id":  o.UserID,
-			"trade_id": tradeID,
-		})
-	}
+	bulkSendLog(tx, logs)
+
 	bank, err := Isubank(tx)
 	if err != nil {
 		return errors.Wrap(err, "isubank init failed")
@@ -219,21 +226,36 @@ func tryTrade(tx *sql.Tx, orderID int64) error {
 			continue
 		}
 
-		to, err = getOpenOrderByID(tx, to.ID, to.User)
+		iErr := make(chan error)
+		rId := make(chan int64)
+		go func() {
+			rid, err := reserveOrder(tx, to, unitPrice)
+			iErr <- err
+			rId <- rid
+		}()
+		oErr := make(chan error)
+		go func() {
+			_, err := getOpenOrderByID(tx, to.ID, to.User)
+			oErr <- err
+		}()
+
+		err = <-iErr
+		if err != nil {
+			if err == isubank.ErrCreditInsufficient {
+				continue
+			}
+			// 予約に失敗した場合errを返し、deferでCancelする
+			return err
+		}
+
+		err = <-oErr
 		if err != nil {
 			if err == ErrOrderAlreadyClosed {
 				continue
 			}
 			return errors.Wrap(err, "getOpenOrderByID  buy_order")
 		}
-		rid, err := reserveOrder(tx, to, unitPrice)
-		if err != nil {
-			if err == isubank.ErrCreditInsufficient {
-				continue
-			}
-			return err
-		}
-		reserves = append(reserves, rid)
+		reserves = append(reserves, <-rId)
 		targets = append(targets, to)
 		restAmount -= to.Amount
 		if restAmount == 0 {

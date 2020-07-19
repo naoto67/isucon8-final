@@ -70,3 +70,15 @@ func sendLog(d QueryExecutor, tag string, v interface{}) {
 		log.Printf("[WARN] logger send failed. tag: %s, v: %v, err:%s", tag, v, err)
 	}
 }
+
+func bulkSendLog(d QueryExecutor, v interface{}) {
+	logger, err := Logger(d)
+	if err != nil {
+		log.Printf("[WARN] new logger failed. tag: %s, v: %v, err:%s", v, err)
+		return
+	}
+	err = logger.BulkSend(v)
+	if err != nil {
+		log.Printf("[WARN] logger send failed. tag: %s, v: %v, err:%s", v, err)
+	}
+}
