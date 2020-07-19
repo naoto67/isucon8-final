@@ -31,7 +31,7 @@ build_bench:
 	mv bench/src/bench/bench bench/bin/bench
 
 cat_alp:
-	cat webapp/nginx/log/access.log | alp ltsv -r -m "/order/.+" | head -n 30
+	cat webapp/nginx/log/access.log | alp ltsv -r -m "/order/.+" --sort=sum | head -n 30
 
 mysql_console:
 	docker-compose -f webapp/docker-compose.go.yml run isucoin mysql -uisucon -pisucon -h192.168.16.3 isucoin

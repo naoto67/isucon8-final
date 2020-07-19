@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"isucon8/isucoin/controller"
+	"isucon8/isucoin/model"
 	"log"
 	"net/http"
 	"os"
@@ -36,13 +37,15 @@ func getEnv(key, def string) string {
 
 func main() {
 	var (
-		port   = getEnv("APP_PORT", "5000")
-		dbhost = getEnv("DB_HOST", "127.0.0.1")
-		dbport = getEnv("DB_PORT", "3306")
-		dbuser = getEnv("DB_USER", "root")
-		dbpass = getEnv("DB_PASSWORD", "")
-		dbname = getEnv("DB_NAME", "isucoin")
-		public = getEnv("PUBLIC_DIR", "public")
+		port    = getEnv("APP_PORT", "5000")
+		dbhost  = getEnv("DB_HOST", "127.0.0.1")
+		dbport  = getEnv("DB_PORT", "3306")
+		dbuser  = getEnv("DB_USER", "root")
+		dbpass  = getEnv("DB_PASSWORD", "")
+		dbname  = getEnv("DB_NAME", "isucoin")
+		public  = getEnv("PUBLIC_DIR", "public")
+		memhost = getEnv("MEMCACHED_HOST", "memcached")
+		memport = getEnv("MEMCACHED_PORT", "11211")
 	)
 
 	dbusrpass := dbuser
@@ -55,6 +58,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("mysql connect failed. err: %s", err)
 	}
+
+	model.NewMemcache(fmt.Sprintf("%s:%s", memhost, memport))
+
 	store := sessions.NewCookieStore([]byte(SessionSecret))
 
 	h := controller.NewHandler(db, store)
