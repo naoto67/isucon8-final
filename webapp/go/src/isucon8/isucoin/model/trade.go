@@ -298,9 +298,9 @@ func RunTrade(db *sql.DB) error {
 
 	candidates := make([]int64, 0, 2)
 	if lowestSellOrder.Amount > highestBuyOrder.Amount {
-		candidates = append(candidates, lowestSellOrder.ID, highestBuyOrder.ID)
+		candidates = append(candidates, lowestSellOrder.ID)
 	} else {
-		candidates = append(candidates, highestBuyOrder.ID, lowestSellOrder.ID)
+		candidates = append(candidates, highestBuyOrder.ID)
 	}
 
 	for _, orderID := range candidates {

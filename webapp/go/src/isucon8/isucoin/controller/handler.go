@@ -38,6 +38,7 @@ func NewHandler(db *sql.DB, store sessions.Store) *Handler {
 }
 
 func (h *Handler) Initialize(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	model.FlushAll()
 	err := h.txScope(func(tx *sql.Tx) error {
 		if err := model.InitBenchmark(tx); err != nil {
 			return err
@@ -92,14 +93,23 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		h.handleError(w, errors.New("all parameters are required"), 400)
 		return
 	}
+
 	user, err := model.UserLogin(h.db, bankID, password)
 	switch {
 	case err == model.ErrUserNotFound:
-		// TODO: 失敗が多いときに403を返すBanの仕様に対応
-		h.handleError(w, err, 404)
+		count, _ := model.FetchUserFailures(bankID)
+		if count >= 5 {
+			h.handleError(w, errors.New("forbidden"), 403)
+			return
+		} else {
+			model.IncrUserFailures(bankID)
+			// TODO: 失敗が多いときに403を返すBanの仕様に対応
+			h.handleError(w, err, 404)
+		}
 	case err != nil:
 		h.handleError(w, err, 500)
 	default:
+		model.DeleteUserFailures(bankID)
 		session, err := h.store.Get(r, SessionName)
 		if err != nil {
 			h.handleError(w, err, 500)
@@ -248,10 +258,11 @@ func (h *Handler) AddOrders(w http.ResponseWriter, r *http.Request, _ httprouter
 			return
 		}
 		if tradeChance {
-			if err := model.RunTrade(h.db); err != nil {
-				// トレードに失敗してもエラーにはしない
-				log.Printf("runTrade err:%s", err)
-			}
+			go model.RunTrade(h.db)
+			// if err := model.RunTrade(h.db); err != nil {
+			// 	// トレードに失敗してもエラーにはしない
+			// 	log.Printf("runTrade err:%s", err)
+			// }
 		}
 		h.handleSuccess(w, map[string]interface{}{
 			"id": order.ID,
